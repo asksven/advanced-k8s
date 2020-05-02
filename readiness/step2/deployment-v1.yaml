@@ -1,0 +1,76 @@
+kind: List
+apiVersion: v1
+items:
+- apiVersion: extensions/v1beta1
+  kind: Ingress
+  metadata:
+    name: probetester 
+  spec:
+    rules:
+    - host: cluster.local
+      http:
+        paths:
+        - backend:
+            serviceName: probetester-svc
+            servicePort: 80
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    creationTimestamp: null
+    name: probetester-svc
+  spec:
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+    selector:
+      app: probetester
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    creationTimestamp: null
+    labels:
+      app: probetester
+    name: probetester-deployment
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    selector:
+      matchLabels:
+        app: probetester
+    template:
+      metadata:
+        labels:
+          app: probetester
+      spec:
+        containers:
+        - image: trondhindenes/k8sprobetester:latest
+          imagePullPolicy: IfNotPresent
+          name: probetester
+          env:
+            - name: START_WAIT_SECS
+              value: '5'        
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: 80
+          #     httpHeaders:
+          #       - name: Host
+          #         value: KubernetesLivenessProbe
+          #   initialDelaySeconds: 60
+          #   failureThreshold: 2                
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+              httpHeaders:
+                - name: Host
+                  value: KubernetesLivenessProbe
+            initialDelaySeconds: 5
+            failureThreshold: 2                            
